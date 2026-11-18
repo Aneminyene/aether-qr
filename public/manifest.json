@@ -1,0 +1,18 @@
+{
+  "name": "AETHER-QR // Air-Gapped Optical Transfer",
+  "short_name": "AETHER-QR",
+  "description": "Zero-connectivity animated QR code file transfer system — no Wi-Fi, Bluetooth or network required.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='none'><rect width='192' height='192' rx='36' fill='%2309090b'/><rect x='36' y='36' width='44' height='44' rx='8' stroke='%23f4f4f5' stroke-width='10'/><rect x='112' y='36' width='44' height='44' rx='8' stroke='%23f4f4f5' stroke-width='10'/><rect x='36' y='112' width='44' height='44' rx='8' stroke='%23f4f4f5' stroke-width='10'/><path d='M112 112h20v20h-20zM136 136h20v20h-20z' fill='%23f4f4f5'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
