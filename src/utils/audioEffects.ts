@@ -1,20 +1,18 @@
-// Web Audio API Synthesizer for sci-fi sound effects
+// Web Audio API Synthesizer for optical transfer audio feedback
 class AudioSynthesizer {
-  constructor() {
-    this.ctx = null;
-    this.enabled = true;
-  }
+  ctx: AudioContext | null = null;
+  enabled: boolean = true;
 
-  init() {
+  init(): void {
     if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
     }
   }
 
-  playChunkBeep(progressRatio = 0.5) {
+  playChunkBeep(progressRatio: number = 0.5): void {
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;
@@ -42,7 +40,7 @@ class AudioSynthesizer {
     }
   }
 
-  playSuccessFanfare() {
+  playSuccessFanfare(): void {
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;
@@ -50,6 +48,7 @@ class AudioSynthesizer {
     try {
       const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
       notes.forEach((freq, idx) => {
+        if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
@@ -70,7 +69,7 @@ class AudioSynthesizer {
     }
   }
 
-  playErrorBuzz() {
+  playErrorBuzz(): void {
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;

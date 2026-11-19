@@ -1,36 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { motion } from 'framer-motion';
 import { processFileForTransfer } from '../utils/fileProcessor';
+import { FileTransferData, SenderTransferState } from '../types/protocol';
 import { 
   Upload, Play, Pause, SkipForward, SkipBack, 
-  Settings2, RefreshCw, FileText, Lock, CheckCircle2, SlidersHorizontal
+  RefreshCw, FileText, Lock, SlidersHorizontal
 } from 'lucide-react';
 
-export default function Sender({ onTransferStateChange }) {
-  const [file, setFile] = useState(null);
-  const [transferData, setTransferData] = useState(null);
-  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [fps, setFps] = useState(12);
-  const [chunkSize, setChunkSize] = useState(800);
-  const [useFountain, setUseFountain] = useState(true);
-  const [wakeLockActive, setWakeLockActive] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+interface SenderProps {
+  onTransferStateChange?: (state: SenderTransferState) => void;
+}
 
-  const canvasRef = useRef(null);
-  const wakeLockRef = useRef(null);
-  const timerRef = useRef(null);
+export default function Sender({ onTransferStateChange }: SenderProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [transferData, setTransferData] = useState<FileTransferData | null>(null);
+  const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [fps, setFps] = useState<number>(12);
+  const [chunkSize, setChunkSize] = useState<number>(800);
+  const [useFountain, setUseFountain] = useState<boolean>(true);
+  const [wakeLockActive, setWakeLockActive] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // File Upload Handler
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
     setFile(selectedFile);
     await processFile(selectedFile, chunkSize, useFountain);
   };
 
-  const processFile = async (f, size, fountain) => {
+  const processFile = async (f: File, size: number, fountain: boolean) => {
     setIsProcessing(true);
     try {
       const data = await processFileForTransfer(f, size, fountain);
@@ -45,7 +49,7 @@ export default function Sender({ onTransferStateChange }) {
   };
 
   // Re-process if settings change
-  const handleSettingsChange = async (newChunkSize, newFountain) => {
+  const handleSettingsChange = async (newChunkSize: number, newFountain: boolean) => {
     setChunkSize(newChunkSize);
     setUseFountain(newFountain);
     if (file) {
@@ -64,7 +68,7 @@ export default function Sender({ onTransferStateChange }) {
         });
       }
     } catch (err) {
-      console.warn('Wake Lock error:', err.message);
+      console.warn('Wake Lock error:', err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -132,7 +136,7 @@ export default function Sender({ onTransferStateChange }) {
       currentFrame: currentFrameIndex,
       totalFrames: transferData?.chunks.length || 0
     });
-  }, [isPlaying, currentFrameIndex, transferData]);
+  }, [isPlaying, currentFrameIndex, transferData, onTransferStateChange]);
 
   return (
     <div className="flex flex-col gap-6">

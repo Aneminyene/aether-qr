@@ -1,9 +1,20 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { Activity, Radio } from 'lucide-react';
+import { Radio } from 'lucide-react';
 
-export default function Cyber3DVisualizer({ activeMode = 'sender', isTransferring = false, progress = 0 }) {
-  const mountRef = useRef(null);
+interface Cyber3DVisualizerProps {
+  activeMode?: string;
+  isTransferring?: boolean;
+  progress?: number;
+}
+
+export default function Cyber3DVisualizer({
+  activeMode = 'sender',
+  isTransferring = false,
+  progress = 0
+}: Cyber3DVisualizerProps) {
+  void progress; // retained for visualizer extensions
+  const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -29,7 +40,7 @@ export default function Cyber3DVisualizer({ activeMode = 'sender', isTransferrin
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Grid Floor (clean, dark, low-contrast)
+    // Grid Floor
     const gridHelper = new THREE.GridHelper(30, 30, 0x27272a, 0x18181b);
     gridHelper.position.y = -3;
     scene.add(gridHelper);
@@ -57,7 +68,7 @@ export default function Cyber3DVisualizer({ activeMode = 'sender', isTransferrin
     outerRingMesh.rotation.x = Math.PI / 2;
     scene.add(outerRingMesh);
 
-    // Stream Points (fine optical dust)
+    // Stream Points
     const particleCount = 180;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
@@ -94,7 +105,7 @@ export default function Cyber3DVisualizer({ activeMode = 'sender', isTransferrin
     // Subtle Parallax
     let mouseX = 0;
     let mouseY = 0;
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
       mouseX = ((e.clientX - rect.left) / container.clientWidth - 0.5) * 2;
       mouseY = ((e.clientY - rect.top) / container.clientHeight - 0.5) * 2;
@@ -111,8 +122,8 @@ export default function Cyber3DVisualizer({ activeMode = 'sender', isTransferrin
     window.addEventListener('resize', handleResize);
 
     // Animation Loop
-    let animationFrameId;
-    let startTime = performance.now();
+    let animationFrameId: number;
+    const startTime = performance.now();
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -133,7 +144,7 @@ export default function Cyber3DVisualizer({ activeMode = 'sender', isTransferrin
       coreMesh.rotation.x = elapsedTime * 0.18;
 
       // Drift particles
-      const posArray = particleSystem.geometry.attributes.position.array;
+      const posArray = particleSystem.geometry.attributes.position.array as Float32Array;
       for (let i = 0; i < particleCount; i++) {
         if (isTransferring) {
           posArray[i * 3 + 2] += 0.08;

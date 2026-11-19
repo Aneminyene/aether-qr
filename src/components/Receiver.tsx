@@ -1,22 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import jsQR from 'jsqr';
 import confetti from 'canvas-confetti';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FileReconstructor } from '../utils/fileReconstructor';
 import { audioFx } from '../utils/audioEffects';
+import { ReconstructedFile, ScanStats, ReceiverTransferState } from '../types/protocol';
 import { 
   Camera, CameraOff, CheckCircle2, Download, Volume2, VolumeX,
   RefreshCw, AlertCircle, FileCheck, Layers, SwitchCamera
 } from 'lucide-react';
 
-export default function Receiver({ onTransferStateChange }) {
-  const [isScanning, setIsScanning] = useState(false);
-  const [cameraError, setCameraError] = useState(null);
-  const [facingMode, setFacingMode] = useState('environment'); // 'user' or 'environment'
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [reconstructor] = useState(() => new FileReconstructor());
+interface ReceiverProps {
+  onTransferStateChange?: (state: ReceiverTransferState) => void;
+}
 
-  const [scanStats, setScanStats] = useState({
+interface PreviewContent {
+  type: 'image' | 'text';
+  url?: string;
+  text?: string;
+}
+
+export default function Receiver({ onTransferStateChange }: ReceiverProps) {
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [reconstructor] = useState<FileReconstructor>(() => new FileReconstructor());
+
+  const [scanStats, setScanStats] = useState<ScanStats>({
     totalChunks: 0,
     receivedCount: 0,
     progressPercent: 0,
@@ -25,13 +36,13 @@ export default function Receiver({ onTransferStateChange }) {
     fileName: null
   });
 
-  const [completedFile, setCompletedFile] = useState(null);
-  const [previewContent, setPreviewContent] = useState(null);
+  const [completedFile, setCompletedFile] = useState<ReconstructedFile | null>(null);
+  const [previewContent, setPreviewContent] = useState<PreviewContent | null>(null);
 
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const animFrameIdRef = useRef(null);
-  const streamRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animFrameIdRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Toggle Sound FX
   const toggleSound = () => {
@@ -48,7 +59,7 @@ export default function Receiver({ onTransferStateChange }) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
 
-      let stream;
+      let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -111,53 +122,55 @@ export default function Receiver({ onTransferStateChange }) {
 
       if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        if (ctx) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
 
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        // Decode QR Code
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'attemptBoth'
-        });
+          // Decode QR Code
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth'
+          });
 
-        if (code && code.data) {
-          const result = reconstructor.parseFrame(code.data);
-          if (result) {
-            setScanStats({
-              totalChunks: result.totalChunks,
-              receivedCount: result.receivedCount,
-              progressPercent: result.progressPercent,
-              lastReceivedIndex: result.lastReceivedIndex,
-              isComplete: result.isComplete,
-              fileName: reconstructor.fileName
-            });
-
-            audioFx.playChunkBeep(result.progressPercent / 100);
-
-            // Handle completion
-            if (result.isComplete && !completedFile) {
-              const assembled = reconstructor.assembleFile();
-              setCompletedFile(assembled);
-              audioFx.playSuccessFanfare();
-              confetti({
-                particleCount: 80,
-                spread: 60,
-                origin: { y: 0.6 }
+          if (code && code.data) {
+            const result = reconstructor.parseFrame(code.data);
+            if (result) {
+              setScanStats({
+                totalChunks: result.totalChunks,
+                receivedCount: result.receivedCount,
+                progressPercent: result.progressPercent,
+                lastReceivedIndex: result.lastReceivedIndex,
+                isComplete: result.isComplete,
+                fileName: reconstructor.fileName
               });
 
-              // Generate preview if text or image
-              if (assembled.fileType.startsWith('image/')) {
-                setPreviewContent({ type: 'image', url: assembled.downloadUrl });
-              } else if (assembled.fileType.startsWith('text/') || assembled.fileType.includes('json') || assembled.fileType.includes('javascript')) {
-                assembled.blob.text().then((txt) => {
-                  setPreviewContent({ type: 'text', text: txt.substring(0, 2000) });
-                });
-              }
+              audioFx.playChunkBeep(result.progressPercent / 100);
 
-              stopCamera();
-              return;
+              // Handle completion
+              if (result.isComplete && !completedFile) {
+                const assembled = reconstructor.assembleFile();
+                setCompletedFile(assembled);
+                audioFx.playSuccessFanfare();
+                confetti({
+                  particleCount: 80,
+                  spread: 60,
+                  origin: { y: 0.6 }
+                });
+
+                // Generate preview if text or image
+                if (assembled.fileType.startsWith('image/')) {
+                  setPreviewContent({ type: 'image', url: assembled.downloadUrl });
+                } else if (assembled.fileType.startsWith('text/') || assembled.fileType.includes('json') || assembled.fileType.includes('javascript')) {
+                  assembled.blob.text().then((txt) => {
+                    setPreviewContent({ type: 'text', text: txt.substring(0, 2000) });
+                  });
+                }
+
+                stopCamera();
+                return;
+              }
             }
           }
         }
@@ -197,7 +210,7 @@ export default function Receiver({ onTransferStateChange }) {
       totalChunks: scanStats.totalChunks,
       isComplete: scanStats.isComplete
     });
-  }, [isScanning, scanStats]);
+  }, [isScanning, scanStats, onTransferStateChange]);
 
   return (
     <div className="flex flex-col gap-6">

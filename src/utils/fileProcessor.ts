@@ -1,12 +1,13 @@
 import { deflate } from 'pako';
+import { FileTransferData, ChunkItem } from '../types/protocol';
 
 /**
  * Calculates CRC32 checksum for data integrity verification
  */
-export function crc32(str) {
+export function crc32(str: string): string {
   let crc = -1;
   for (let i = 0; i < str.length; i++) {
-    let code = str.charCodeAt(i);
+    const code = str.charCodeAt(i);
     crc ^= code;
     for (let j = 0; j < 8; j++) {
       crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
@@ -18,7 +19,7 @@ export function crc32(str) {
 /**
  * Encodes Uint8Array to Base64
  */
-function uint8ToBase64(bytes) {
+function uint8ToBase64(bytes: Uint8Array): string {
   let binary = '';
   const len = bytes.byteLength;
   for (let i = 0; i < len; i++) {
@@ -30,7 +31,7 @@ function uint8ToBase64(bytes) {
 /**
  * Decodes Base64 to Uint8Array
  */
-export function base64ToUint8(base64) {
+export function base64ToUint8(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -43,11 +44,15 @@ export function base64ToUint8(base64) {
 /**
  * Processes an input File into compressed chunks ready for animated QR transmission
  */
-export async function processFileForTransfer(file, chunkSize = 800, useFountain = false) {
+export async function processFileForTransfer(
+  file: File,
+  chunkSize: number = 800,
+  useFountain: boolean = false
+): Promise<FileTransferData> {
   const arrayBuffer = await file.arrayBuffer();
   const rawBytes = new Uint8Array(arrayBuffer);
   
-  // Compress using pako zlib/gzip
+  // Compress using pako zlib deflate
   const compressedBytes = deflate(rawBytes, { level: 9 });
   const base64Data = uint8ToBase64(compressedBytes);
   
@@ -57,14 +62,14 @@ export async function processFileForTransfer(file, chunkSize = 800, useFountain 
   const transferId = Math.random().toString(36).substring(2, 10).toUpperCase();
 
   const totalChunks = Math.ceil(base64Data.length / chunkSize);
-  const chunks = [];
+  const chunks: ChunkItem[] = [];
 
   for (let i = 0; i < totalChunks; i++) {
     const start = i * chunkSize;
     const end = Math.min(start + chunkSize, base64Data.length);
     const chunkPayload = base64Data.substring(start, end);
     
-    // Header Format: AETH|transferId|totalChunks|chunkIndex|fileChecksum|fileName|mimeType|payload
+    // Header Format: AETH|v1|transferId|totalChunks|chunkIndex|fileChecksum|fileName|mimeType|payload
     const header = [
       'AETH',
       'v1',
@@ -85,7 +90,7 @@ export async function processFileForTransfer(file, chunkSize = 800, useFountain 
   }
 
   // Generate Fountain XOR Parity Chunks if requested
-  const fountainChunks = [];
+  const fountainChunks: ChunkItem[] = [];
   if (useFountain && totalChunks > 1) {
     const fountainCount = Math.ceil(totalChunks * 0.5);
     for (let f = 0; f < fountainCount; f++) {

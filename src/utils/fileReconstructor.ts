@@ -1,18 +1,31 @@
 import { inflate } from 'pako';
 import { base64ToUint8, crc32 } from './fileProcessor';
+import { ParseFrameResult, ReconstructedFile } from '../types/protocol';
 
 export class FileReconstructor {
+  transferId: string | null = null;
+  fileName: string | null = null;
+  fileType: string | null = null;
+  fileChecksum: string | null = null;
+  totalChunks: number = 0;
+  receivedChunks: Map<number, string> = new Map();
+  lastReceivedIndex: number | null = null;
+  startTime: number | null = null;
+  endTime: number | null = null;
+  isComplete: boolean = false;
+  receivedBytes: number = 0;
+
   constructor() {
     this.reset();
   }
 
-  reset() {
+  reset(): void {
     this.transferId = null;
     this.fileName = null;
     this.fileType = null;
     this.fileChecksum = null;
     this.totalChunks = 0;
-    this.receivedChunks = new Map(); // index -> payload string
+    this.receivedChunks = new Map();
     this.lastReceivedIndex = null;
     this.startTime = null;
     this.endTime = null;
@@ -23,7 +36,7 @@ export class FileReconstructor {
   /**
    * Parse incoming raw QR frame string
    */
-  parseFrame(rawFrame) {
+  parseFrame(rawFrame: string): ParseFrameResult | null {
     if (!rawFrame || typeof rawFrame !== 'string') return null;
 
     const parts = rawFrame.split('|');
@@ -35,7 +48,7 @@ export class FileReconstructor {
 
     if (parts.length < 9) return null;
 
-    const [protocol, version, transferId, totalChunksStr, indexStr, fileChecksum, nameEnc, typeEnc, payload] = parts;
+    const [, , transferId, totalChunksStr, indexStr, fileChecksum, nameEnc, typeEnc, payload] = parts;
     const totalChunks = parseInt(totalChunksStr, 10);
     const fileName = decodeURIComponent(nameEnc);
     const fileType = decodeURIComponent(typeEnc);
@@ -74,7 +87,7 @@ export class FileReconstructor {
       if (hasA && !hasB) {
         // Recover B from A and XOR
         try {
-          const chunkA = this.receivedChunks.get(idxA);
+          const chunkA = this.receivedChunks.get(idxA)!;
           const xorPayload = atob(payload);
           let recoveredB = '';
           for (let i = 0; i < Math.min(chunkA.length, xorPayload.length); i++) {
@@ -88,7 +101,7 @@ export class FileReconstructor {
       } else if (!hasA && hasB) {
         // Recover A from B and XOR
         try {
-          const chunkB = this.receivedChunks.get(idxB);
+          const chunkB = this.receivedChunks.get(idxB)!;
           const xorPayload = atob(payload);
           let recoveredA = '';
           for (let i = 0; i < Math.min(chunkB.length, xorPayload.length); i++) {
@@ -122,7 +135,7 @@ export class FileReconstructor {
   /**
    * Reconstruct original file blob when complete
    */
-  assembleFile() {
+  assembleFile(): ReconstructedFile {
     if (!this.isComplete || this.receivedChunks.size < this.totalChunks) {
       throw new Error(`Incomplete payload: received ${this.receivedChunks.size}/${this.totalChunks} chunks`);
     }
@@ -140,7 +153,7 @@ export class FileReconstructor {
     // Decode base64 compressed bytes
     const compressedBytes = base64ToUint8(fullBase64);
 
-    // Decompress using pako zlib/gzip
+    // Decompress using pako zlib inflate
     const decompressedBytes = inflate(compressedBytes);
 
     // Verify uncompressed data checksum
@@ -150,27 +163,28 @@ export class FileReconstructor {
     }
     const computedChecksum = crc32(btoa(binaryStr));
 
-    const isChecksumValid = (computedChecksum.toLowerCase() === this.fileChecksum.toLowerCase());
+    const isChecksumValid = (computedChecksum.toLowerCase() === (this.fileChecksum || '').toLowerCase());
 
-    const blob = new Blob([decompressedBytes], { type: this.fileType || 'application/octet-stream' });
+    const blob = new Blob([decompressedBytes as unknown as BlobPart], { type: this.fileType || 'application/octet-stream' });
     const downloadUrl = URL.createObjectURL(blob);
+    const duration = (this.endTime || Date.now()) - (this.startTime || Date.now());
 
     return {
-      fileName: this.fileName,
-      fileType: this.fileType,
+      fileName: this.fileName || 'transferred_file',
+      fileType: this.fileType || 'application/octet-stream',
       fileSize: decompressedBytes.length,
       blob,
       downloadUrl,
       isChecksumValid,
       computedChecksum,
-      expectedChecksum: this.fileChecksum,
-      transferTimeMs: this.endTime - this.startTime,
-      averageSpeedKbps: ((decompressedBytes.length / 1024) / ((this.endTime - this.startTime) / 1000)).toFixed(1)
+      expectedChecksum: this.fileChecksum || '',
+      transferTimeMs: duration,
+      averageSpeedKbps: duration > 0 ? ((decompressedBytes.length / 1024) / (duration / 1000)).toFixed(1) : '0.0'
     };
   }
 
-  getMissingIndices() {
-    const missing = [];
+  getMissingIndices(): number[] {
+    const missing: number[] = [];
     for (let i = 0; i < this.totalChunks; i++) {
       if (!this.receivedChunks.has(i)) {
         missing.push(i);

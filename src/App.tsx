@@ -6,10 +6,18 @@ import Receiver from './components/Receiver';
 import SimulationMode from './components/SimulationMode';
 import BlueprintDocs from './components/BlueprintDocs';
 import Cyber3DVisualizer from './components/Cyber3DVisualizer';
+import { SenderTransferState, ReceiverTransferState } from './types/protocol';
 import './index.css';
 
+interface TabItem {
+  id: 'sender' | 'receiver' | 'simulate' | 'blueprint';
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  activeMode: string;
+}
+
 // ── Tab configuration ───────────────────────────────────────────────────────
-const TABS = [
+const TABS: TabItem[] = [
   { id: 'sender',    label: 'Sender',    icon: Upload,   activeMode: 'sender' },
   { id: 'receiver',  label: 'Receiver',  icon: Camera,   activeMode: 'receiver' },
   { id: 'simulate',  label: 'Simulator', icon: Cpu,      activeMode: 'sim' },
@@ -18,9 +26,9 @@ const TABS = [
 
 // ── App Root ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [activeTab, setActiveTab] = useState('sender');
-  const [senderState, setSenderState] = useState({ isSending: false, currentFrame: 0, totalFrames: 0 });
-  const [receiverState, setReceiverState] = useState({ isReceiving: false, isComplete: false });
+  const [activeTab, setActiveTab] = useState<'sender' | 'receiver' | 'simulate' | 'blueprint'>('sender');
+  const [senderState, setSenderState] = useState<SenderTransferState>({ isSending: false, currentFrame: 0, totalFrames: 0 });
+  const [receiverState, setReceiverState] = useState<ReceiverTransferState>({ isReceiving: false, isComplete: false });
 
   const currentTab = TABS.find((t) => t.id === activeTab);
   const isTransferring = senderState.isSending || receiverState.isReceiving;
@@ -137,7 +145,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <span>Client-side only</span>
             <span>·</span>
-            <span>No network required</span>
+            <span>TypeScript verified</span>
           </div>
         </footer>
       </div>

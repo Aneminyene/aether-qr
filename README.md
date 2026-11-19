@@ -92,9 +92,9 @@ The receiver accesses the device video camera, draws frames onto an offscreen ca
 
 ## Tech Stack
 
-- **Framework**: React 19 + Vite
+- **Framework**: React 19 + TypeScript + Vite
 - **Styling**: Tailwind CSS v4 + Minimalist Zinc Dark Theme
-- **Icons**: Lucide React
+- **Type Definitions**: Strict TypeScript (`tsconfig.json`)
 - **QR Encoding**: `qrcode`
 - **QR Decoding**: `jsQR`
 - **Compression**: `pako` (zlib Deflate / Inflate)

@@ -1,33 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
-import { motion } from 'framer-motion';
 import { processFileForTransfer } from '../utils/fileProcessor';
 import { FileReconstructor } from '../utils/fileReconstructor';
 import { audioFx } from '../utils/audioEffects';
+import { FileTransferData, ReconstructedFile, ScanStats } from '../types/protocol';
 import { 
-  Play, Pause, CheckCircle2, Download, RefreshCw, 
-  Layers, Cpu, Sparkles, SlidersHorizontal
+  Play, Pause, CheckCircle2, Download, 
+  Cpu, Sparkles
 } from 'lucide-react';
 
 export default function SimulationMode() {
-  const [testFile, setTestFile] = useState(null);
-  const [senderData, setSenderData] = useState(null);
-  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [fps, setFps] = useState(15);
-  const [reconstructor] = useState(() => new FileReconstructor());
+  const [, setTestFile] = useState<File | null>(null);
+  const [senderData, setSenderData] = useState<FileTransferData | null>(null);
+  const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [fps, setFps] = useState<number>(15);
+  const [reconstructor] = useState<FileReconstructor>(() => new FileReconstructor());
 
-  const [simStats, setSimStats] = useState({
+  const [simStats, setSimStats] = useState<ScanStats>({
     totalChunks: 0,
     receivedCount: 0,
     progressPercent: 0,
     lastReceivedIndex: null,
-    isComplete: false
+    isComplete: false,
+    fileName: null
   });
 
-  const [completedFile, setCompletedFile] = useState(null);
-  const canvasRef = useRef(null);
+  const [completedFile, setCompletedFile] = useState<ReconstructedFile | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Generate Sample Demo File
   const handleGenerateSampleFile = async () => {
@@ -49,7 +50,7 @@ Aether-QR transmits files across physical isolation air-gaps by slicing compress
   };
 
   // Process selected custom or sample file
-  const initTransfer = async (file) => {
+  const initTransfer = async (file: File) => {
     reconstructor.reset();
     setCompletedFile(null);
     setSimStats({
@@ -57,7 +58,8 @@ Aether-QR transmits files across physical isolation air-gaps by slicing compress
       receivedCount: 0,
       progressPercent: 0,
       lastReceivedIndex: null,
-      isComplete: false
+      isComplete: false,
+      fileName: null
     });
 
     const data = await processFileForTransfer(file, 600, true);
@@ -95,7 +97,8 @@ Aether-QR transmits files across physical isolation air-gaps by slicing compress
           receivedCount: res.receivedCount,
           progressPercent: res.progressPercent,
           lastReceivedIndex: res.lastReceivedIndex,
-          isComplete: res.isComplete
+          isComplete: res.isComplete,
+          fileName: reconstructor.fileName
         });
 
         audioFx.playChunkBeep(res.progressPercent / 100);

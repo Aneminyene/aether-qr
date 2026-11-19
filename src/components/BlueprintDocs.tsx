@@ -1,10 +1,44 @@
 import React from 'react';
 import { 
-  FileText, ShieldCheck, Layers, Cpu, CheckCircle2,
+  ShieldCheck, Layers, Cpu, CheckCircle2,
   HardDrive, RefreshCw, BarChart2
 } from 'lucide-react';
 
+interface PipelineStep {
+  step: string;
+  title: string;
+  desc: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
 export default function BlueprintDocs() {
+  const steps: PipelineStep[] = [
+    {
+      step: '01',
+      title: 'Compression & ArrayBuffer',
+      desc: 'Reads raw file bytes, applies zlib deflate via pako to shrink payload size by up to 70%.',
+      icon: HardDrive
+    },
+    {
+      step: '02',
+      title: 'Framing & CRC32',
+      desc: 'Slices payload into 500–1600 byte chunks with sequential framing headers and CRC32 checksums.',
+      icon: Layers
+    },
+    {
+      step: '03',
+      title: 'Animated QR Stream',
+      desc: 'Renders dynamic QR matrices on HTML5 Canvas at 5–30 FPS with screen wake lock engaged.',
+      icon: RefreshCw
+    },
+    {
+      step: '04',
+      title: 'Optical Capture & Assemble',
+      desc: 'jsQR decodes frames from camera feed, validates checksums, decompresses payload, and saves file.',
+      icon: CheckCircle2
+    }
+  ];
+
   return (
     <div className="flex flex-col gap-8 font-sans">
       {/* Header Banner */}
@@ -33,43 +67,21 @@ export default function BlueprintDocs() {
 
       {/* 4-Phase Data Pipeline Flow */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            step: '01',
-            title: 'Compression & ArrayBuffer',
-            desc: 'Reads raw file bytes, applies zlib deflate via pako to shrink payload size by up to 70%.',
-            icon: HardDrive
-          },
-          {
-            step: '02',
-            title: 'Framing & CRC32',
-            desc: 'Slices payload into 500–1600 byte chunks with sequential framing headers and CRC32 checksums.',
-            icon: Layers
-          },
-          {
-            step: '03',
-            title: 'Animated QR Stream',
-            desc: 'Renders dynamic QR matrices on HTML5 Canvas at 5–30 FPS with screen wake lock engaged.',
-            icon: RefreshCw
-          },
-          {
-            step: '04',
-            title: 'Optical Capture & Assemble',
-            desc: 'jsQR decodes frames from camera feed, validates checksums, decompresses payload, and saves file.',
-            icon: CheckCircle2
-          }
-        ].map((item, idx) => (
-          <div key={idx} className="minimal-panel p-5 rounded-xl flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-lg font-bold font-mono text-zinc-500">{item.step}</span>
-                <item.icon className="w-4 h-4 text-zinc-400 stroke-[1.75]" />
+        {steps.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <div key={idx} className="minimal-panel p-5 rounded-xl flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-lg font-bold font-mono text-zinc-500">{item.step}</span>
+                  <Icon className="w-4 h-4 text-zinc-400 stroke-[1.75]" />
+                </div>
+                <h4 className="text-xs font-semibold text-zinc-200 mb-1">{item.title}</h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">{item.desc}</p>
               </div>
-              <h4 className="text-xs font-semibold text-zinc-200 mb-1">{item.title}</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">{item.desc}</p>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Architecture Components Grid */}
